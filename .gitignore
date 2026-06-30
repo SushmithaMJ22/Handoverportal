@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables — ignore actual secrets, keep templates
+.env
+.env.local
+.env.*.local
+# .env.docker is a template — keep it in git
+
+# Uploads
+uploads/
+
+# Node (frontend)
+node_modules/
+.next/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.trae/
+.vscode/

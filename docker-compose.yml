@@ -1,0 +1,69 @@
+services:
+
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: handover_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d handover_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app_network
+
+  # ─── FastAPI Backend ──────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/handover_db
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: user
+      DB_NAME: handover_db
+      SECRET_KEY: ${SECRET_KEY:-change_this_in_production_use_a_64_char_random_string}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      STORAGE_MODE: ${STORAGE_MODE:-local}
+      UPLOAD_DIR: /app/uploads
+      # S3 settings (only needed when STORAGE_MODE=s3)
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    # Expose backend port for direct access / debugging (optional — remove in production)
+    ports:
+      - "8000:8000"
+
+  # ─── React Frontend (built + served via nginx) ────────────────────────────
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app_network
+    ports:
+      - "80:80"
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads_data:
