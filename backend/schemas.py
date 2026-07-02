@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 from models import UserRole, DocType
+import re
 
 # User Schemas
 class UserBase(BaseModel):
@@ -10,14 +11,39 @@ class UserBase(BaseModel):
     email: EmailStr
     role: UserRole = UserRole.USER
 
+def validate_password_strength(password: str) -> str:
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    if not re.search(r'[A-Z]', password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not re.search(r'[a-z]', password):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not re.search(r'[0-9]', password):
+        raise ValueError("Password must contain at least one digit")
+    if not re.search(r'[!@#$%^&*]', password):
+        raise ValueError("Password must contain at least one special character (!@#$%^&*)")
+    return password
+
 class UserCreate(UserBase):
     password: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        return validate_password_strength(password)
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, password: Optional[str]) -> Optional[str]:
+        if password is not None:
+            return validate_password_strength(password)
+        return password
 
 class UserOut(UserBase):
     id: int

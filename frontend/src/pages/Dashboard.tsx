@@ -10,79 +10,117 @@ import {
 const COLORS = ['#4F46E5', '#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#3B82F6'] 
  
 export default function Dashboard() { 
-  const { user, isAdmin, isUser, displayName } = useAuth() 
+  const { user, isAdmin, isUser, isSuperAdmin, displayName } = useAuth() 
   const navigate = useNavigate() 
-  const [stats, setStats] = useState({ 
-    total_handovers: 0, 
-    this_month: 0, 
-    my_handovers: 0, 
-    open_tickets: 0, 
-    by_product: [], 
-    by_region: [], 
-    recent_handovers: [] 
-  }) 
-  const [loading, setLoading] = useState(true) 
- 
-  useEffect(() => { 
-    fetchStats() 
-  }, []) 
- 
-  const fetchStats = async () => { 
-    try { 
-      setLoading(true) 
-      const res = await api.get('/handovers/stats/dashboard') 
-      setStats(res.data) 
-    } catch (err) { 
-      console.error('Failed to fetch dashboard stats:', err) 
-    } finally { 
-      setLoading(false) 
-    } 
-  } 
- 
-  const statCards = isAdmin ? [ 
-    { 
-      label: 'Total Handovers', 
-      value: stats.total_handovers, 
-      color: '#4F46E5', 
-      bg: '#EEF2FF', 
-      icon: '📋' 
-    }, 
-    { 
-      label: 'Handovers This Month', 
-      value: stats.this_month, 
-      color: '#3B82F6', 
-      bg: '#EFF6FF', 
-      icon: '📅' 
-    }, 
-    { 
-      label: 'My Handovers', 
-      value: stats.my_handovers, 
-      color: '#10B981', 
-      bg: '#ECFDF5', 
-      icon: '✅' 
-    }, 
-    { 
-      label: 'Open Support Tickets', 
-      value: stats.open_tickets, 
-      color: '#F59E0B', 
-      bg: '#FFFBEB', 
-      icon: '🎫' 
-    } 
-  ] : [ 
-    { 
-      label: 'Total Handovers', 
-      value: stats.total_handovers, 
-      color: '#4F46E5', 
-      bg: '#EEF2FF', 
-      icon: '📋' 
-    }, 
-    { 
-      label: 'Handovers This Month', 
-      value: stats.this_month, 
-      color: '#3B82F6', 
-      bg: '#EFF6FF', 
-      icon: '📅' 
-    } 
+  const [stats, setStats] = useState({
+    total_handovers: 0,
+    this_month: 0,
+    my_handovers: 0,
+    open_tickets: 0,
+    by_product: [],
+    by_region: [],
+    recent_handovers: []
+  })
+  const [loading, setLoading] = useState(true)
+  const [allUsers, setAllUsers] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      api.get('/users').then(res => {
+        setAllUsers(Array.isArray(res.data) ? res.data : [])
+      }).catch(() => {})
+    }
+  }, [isSuperAdmin])
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/handovers/stats/dashboard')
+      setStats(res.data)
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const statCards = isSuperAdmin ? [
+    {
+      label: 'Total Handovers',
+      value: stats.total_handovers,
+      color: '#4F46E5',
+      bg: '#EEF2FF',
+      icon: '📋'
+    },
+    {
+      label: 'Handovers This Month',
+      value: stats.this_month,
+      color: '#3B82F6',
+      bg: '#EFF6FF',
+      icon: '📅'
+    },
+    {
+      label: 'Total Users',
+      value: allUsers.length,
+      color: '#10B981',
+      bg: '#ECFDF5',
+      icon: '👥'
+    },
+    {
+      label: 'Open Support Tickets',
+      value: stats.open_tickets,
+      color: '#F59E0B',
+      bg: '#FFFBEB',
+      icon: '🎫'
+    }
+  ] : isAdmin ? [
+    {
+      label: 'Total Handovers',
+      value: stats.total_handovers,
+      color: '#4F46E5',
+      bg: '#EEF2FF',
+      icon: '📋'
+    },
+    {
+      label: 'Handovers This Month',
+      value: stats.this_month,
+      color: '#3B82F6',
+      bg: '#EFF6FF',
+      icon: '📅'
+    },
+    {
+      label: 'My Handovers',
+      value: stats.my_handovers,
+      color: '#10B981',
+      bg: '#ECFDF5',
+      icon: '✅'
+    },
+    {
+      label: 'Open Support Tickets',
+      value: stats.open_tickets,
+      color: '#F59E0B',
+      bg: '#FFFBEB',
+      icon: '🎫'
+    }
+  ] : [
+    {
+      label: 'Total Handovers',
+      value: stats.total_handovers,
+      color: '#4F46E5',
+      bg: '#EEF2FF',
+      icon: '📋'
+    },
+    {
+      label: 'Handovers This Month',
+      value: stats.this_month,
+      color: '#3B82F6',
+      bg: '#EFF6FF',
+      icon: '📅'
+    }
   ] 
  
   return ( 
@@ -136,10 +174,46 @@ export default function Dashboard() {
         </div> 
       </div> 
  
-      {/* Action Buttons */} 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}> 
-        {isAdmin && ( 
-          <button 
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/users')}
+            style={{
+              background: 'linear-gradient(135deg, #059669, #047857)',
+              color: 'white',
+              padding: '12px 28px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '15px',
+              boxShadow: '0 4px 12px rgba(5,150,105,0.4)'
+            }}
+          >
+            👥 Manage Users
+          </button>
+        )}
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/superadmin/activity')}
+            style={{
+              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+              color: 'white',
+              padding: '12px 28px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '15px',
+              boxShadow: '0 4px 12px rgba(124,58,237,0.4)'
+            }}
+          >
+            📊 Activity Log
+          </button>
+        )}
+        {isAdmin && (
+          <button
             onClick={() => navigate('/handovers/new')} 
             style={{ 
               background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', 
@@ -428,10 +502,69 @@ export default function Dashboard() {
                 </tr> 
               ))} 
             </tbody> 
-          </table> 
-        )} 
-      </div> 
- 
+          </table>
+        )}
+      </div>
+
+      {isSuperAdmin && allUsers.length > 0 && (
+        <div style={{
+          background: 'white',
+          borderRadius: '14px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          marginTop: '28px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+              All Users & Admins
+            </h3>
+            <button
+              onClick={() => navigate('/users')}
+              style={{ background: 'none', border: 'none', color: '#4F46E5', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
+            >
+              Manage Users →
+            </button>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
+                {['#', 'Full Name', 'Username', 'Email', 'Role', 'Status'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '13px', fontWeight: 600, color: '#6B7280' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {allUsers.map((u: any, i: number) => (
+                <tr key={u.id} style={{ borderBottom: '1px solid #F9FAFB', background: i % 2 === 0 ? 'white' : '#FAFAFA' }}>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>{u.id}</td>
+                  <td style={{ padding: '12px', fontSize: '14px', fontWeight: 500 }}>{u.full_name || '—'}</td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>{u.username}</td>
+                  <td style={{ padding: '12px', fontSize: '14px', color: '#6B7280' }}>{u.email}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      background: u.role === 'super_admin' ? '#FEF3C7' : u.role === 'admin' ? '#EEF2FF' : '#F0FDF4',
+                      color: u.role === 'super_admin' ? '#D97706' : u.role === 'admin' ? '#4F46E5' : '#10B981',
+                      padding: '3px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 500
+                    }}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      background: u.is_active !== false ? '#ECFDF5' : '#FEF2F2',
+                      color: u.is_active !== false ? '#10B981' : '#EF4444',
+                      padding: '3px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 500
+                    }}>
+                      {u.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
     </div> 
   ) 
 } 

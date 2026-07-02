@@ -8,6 +8,7 @@ import ReportsPage from './pages/ReportsPage';
 import UserManagement from './pages/UserManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import CreateUserPage from './pages/CreateUserPage';
+import SuperAdminActivityPage from './pages/SuperAdminActivityPage';
 import Layout from './components/Layout';
 import { useAuth } from './hooks/useAuth';
 
@@ -43,7 +44,7 @@ function App() {
             : <Navigate to="/dashboard" replace />
         } />
         <Route path="dashboard" element={
-          <ProtectedRoute roles={['admin', 'user']}>
+          <ProtectedRoute roles={['admin', 'user', 'super_admin']}>
             <Dashboard />
           </ProtectedRoute>
         } />
@@ -80,6 +81,11 @@ function App() {
         <Route path="users" element={
           <ProtectedRoute roles={['super_admin']}>
             <UserManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="superadmin/activity" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <SuperAdminActivityPage />
           </ProtectedRoute>
         } />
       </Route>

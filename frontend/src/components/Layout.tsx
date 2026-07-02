@@ -14,6 +14,7 @@ const Layout = () => {
     { label: 'Customers', icon: Building2, path: '/customers', roles: ['super_admin', 'admin', 'user'] },
     { label: 'Reports', icon: BarChart3, path: '/reports', roles: ['super_admin', 'admin', 'user'] },
     { label: 'User Management', icon: Users, path: '/users', roles: ['super_admin'] },
+    { label: 'Activity Log', icon: FileText, path: '/superadmin/activity', roles: ['super_admin'] },
   ];
 
   return (

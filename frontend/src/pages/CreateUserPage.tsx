@@ -1,9 +1,30 @@
 import { useState } from 'react' 
 import { useNavigate } from 'react-router-dom' 
 import api from '../api/axios' 
- 
+import { useAuth } from '../hooks/useAuth' 
+
+const validatePasswordStrength = (password: string): string | null => {
+  if (password.length < 8) {
+    return "Password must be at least 8 characters long"
+  }
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter"
+  }
+  if (!/[a-z]/.test(password)) {
+    return "Password must contain at least one lowercase letter"
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one digit"
+  }
+  if (!/[!@#$%^&*]/.test(password)) {
+    return "Password must contain at least one special character (!@#$%^&*)"
+  }
+  return null
+}
+
 export default function CreateUserPage() { 
   const navigate = useNavigate() 
+  const { isSuperAdmin } = useAuth()
   const [fullName, setFullName] = useState('') 
   const [username, setUsername] = useState('') 
   const [email, setEmail] = useState('') 
@@ -13,13 +34,19 @@ export default function CreateUserPage() {
   const [loading, setLoading] = useState(false) 
   const [error, setError] = useState('') 
   const [success, setSuccess] = useState('') 
+  const [passwordError, setPasswordError] = useState<string | null>(null)
  
   const handleCreate = async () => { 
     setError('') 
+    setPasswordError(null)
     if (!fullName.trim()) { setError('Full name is required'); return } 
     if (!username.trim()) { setError('Username is required'); return } 
     if (!email.trim()) { setError('Email is required'); return } 
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return } 
+    const pwdErr = validatePasswordStrength(password)
+    if (pwdErr) { 
+      setPasswordError(pwdErr)
+      return 
+    }
     if (password !== confirmPassword) { setError('Passwords do not match'); return } 
     if (!role) { setError('Please select Admin or User role'); return } 
     try { 
@@ -55,6 +82,28 @@ export default function CreateUserPage() {
     <div style={{ minHeight: '100vh', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}> 
       <div style={{ background: 'white', borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.1)', width: '100%', maxWidth: '620px', overflow: 'hidden' }}> 
  
+        {/* Superadmin Dashboard Button */}
+        {isSuperAdmin && (
+          <div style={{ padding: '16px 32px', borderBottom: '1px solid #F3F4F6' }}>
+            <button 
+              onClick={() => navigate('/dashboard')}
+              style={{
+                width: '100%',
+                height: '44px',
+                background: 'white',
+                color: '#4F46E5',
+                border: '1px solid #4F46E5',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              ➡️ Go to Dashboard as Superadmin
+            </button>
+          </div>
+        )}
+
         {/* Header */} 
         <div style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', padding: '32px', textAlign: 'center' }}> 
           <div style={{ fontSize: '40px' }}>👥</div> 
@@ -91,8 +140,29 @@ export default function CreateUserPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}> 
             <div> 
               <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>Password *</label> 
-              <input type="password" placeholder="Min 8 characters" value={password} onChange={e => setPassword(e.target.value)} 
-                style={{ width: '100%', height: '44px', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '0 12px', fontSize: '15px', boxSizing: 'border-box' }} /> 
+              <input 
+                type="password" 
+                placeholder="Min 8 chars, 1 upper, 1 lower, 1 digit, 1 special (!@#$%^&*)" 
+                value={password} 
+                onChange={e => {
+                  setPassword(e.target.value)
+                  setPasswordError(validatePasswordStrength(e.target.value))
+                }}
+                style={{ 
+                  width: '100%', 
+                  height: '44px', 
+                  border: `1px solid ${passwordError ? '#EF4444' : '#E5E7EB'}`, 
+                  borderRadius: '8px', 
+                  padding: '0 12px', 
+                  fontSize: '15px', 
+                  boxSizing: 'border-box' 
+                }} 
+              />
+              {passwordError && (
+                <div style={{ color: '#EF4444', fontSize: '12px', marginTop: '4px' }}>
+                  ⚠ {passwordError}
+                </div>
+              )}
             </div> 
             <div> 
               <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>Confirm Password *</label> 

@@ -3,6 +3,25 @@ import { Users, UserPlus, Shield, Mail, Trash2, Edit2, Check, X, Loader2, User, 
 import api from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
 
+const validatePasswordStrength = (password: string): string | null => {
+  if (password.length < 8) {
+    return "Password must be at least 8 characters long"
+  }
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter"
+  }
+  if (!/[a-z]/.test(password)) {
+    return "Password must contain at least one lowercase letter"
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one digit"
+  }
+  if (!/[!@#$%^&*]/.test(password)) {
+    return "Password must contain at least one special character (!@#$%^&*)"
+  }
+  return null
+}
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +35,7 @@ const UserManagement = () => {
     confirmPassword: '',
     role: 'user'
   });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const { isSuperAdmin } = useAuth();
 
@@ -36,15 +56,19 @@ const UserManagement = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setPasswordError(null);
     
     if (!editingUser && formData.password !== formData.confirmPassword) {
       alert("Passwords do not match");
       return;
     }
 
-    if (!editingUser && formData.password.length < 8) {
-      alert("Password must be at least 8 characters");
-      return;
+    if (!editingUser) {
+      const pwdErr = validatePasswordStrength(formData.password)
+      if (pwdErr) { 
+        setPasswordError(pwdErr)
+        return 
+      }
     }
 
     try {
@@ -62,6 +86,7 @@ const UserManagement = () => {
       setShowModal(false);
       setEditingUser(null);
       setFormData({ full_name: '', username: '', email: '', password: '', confirmPassword: '', role: 'user' });
+      setPasswordError(null);
       fetchUsers();
     } catch (err: any) {
       const detail = err.response?.data?.detail;
@@ -89,6 +114,19 @@ const UserManagement = () => {
     }
   };
 
+  const handleDelete = async (u: any) => {
+    if (window.confirm("Are you sure you want to delete this user? This cannot be undone.")) {
+      try {
+        await api.delete(`/users/${u.id}`);
+        fetchUsers();
+      } catch (err: any) {
+        const detail = err.response?.data?.detail;
+        const message = typeof detail === 'string' ? detail : 'Error deleting user';
+        alert(message);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -101,6 +139,7 @@ const UserManagement = () => {
             onClick={() => {
               setEditingUser(null);
               setFormData({ full_name: '', username: '', email: '', password: '', confirmPassword: '', role: 'user' });
+              setPasswordError(null);
               setShowModal(true);
             }}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors"
@@ -182,6 +221,12 @@ const UserManagement = () => {
                         >
                           {u.is_active ? 'Deactivate' : 'Reactivate'}
                         </button>
+                        <button
+                          onClick={() => handleDelete(u)}
+                          className="font-medium text-sm text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
                       </>
                     )}
                   </td>
@@ -205,7 +250,6 @@ const UserManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* error variable is not defined in the component, adding placeholder for future error handling if needed, but for now fixing the search block based on current code structure */}
               {!editingUser && (
                 <>
                   <div>
@@ -239,15 +283,23 @@ const UserManagement = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password* (min 8 chars)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password* (min 8 chars, 1 upper, 1 lower, 1 digit, 1 special (!@#$%^&*))</label>
                     <input
                       type="password"
                       required
-                      minLength={8}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none ${passwordError ? 'border-red-500' : ''}`}
                       value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      onChange={(e) => {
+                        const newPwd = e.target.value
+                        setFormData({...formData, password: newPwd})
+                        setPasswordError(validatePasswordStrength(newPwd))
+                      }}
                     />
+                    {passwordError && (
+                      <div className="text-red-500 text-xs mt-1">
+                        ⚠ {passwordError}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password*</label>
