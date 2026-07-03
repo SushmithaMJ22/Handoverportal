@@ -23,6 +23,12 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [allUsers, setAllUsers] = useState<any[]>([])
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [editUsername, setEditUsername] = useState('')
+  const [editPassword, setEditPassword] = useState('')
+  const [editError, setEditError] = useState('')
+  const [editSuccess, setEditSuccess] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -45,6 +51,39 @@ export default function Dashboard() {
       console.error('Failed to fetch dashboard stats:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUpdateCredentials = async () => {
+    if (!editingUser) return
+    setEditError('')
+    setEditSuccess('')
+    if (!editUsername.trim() && !editPassword.trim()) {
+      setEditError('Enter a new username or password to update')
+      return
+    }
+    setEditLoading(true)
+    try {
+      const body: any = {}
+      if (editUsername.trim()) body.username = editUsername.trim()
+      if (editPassword.trim()) body.password = editPassword.trim()
+      await api.put(`/users/${editingUser.id}/credentials`, body)
+      setEditSuccess('Updated successfully!')
+      setAllUsers(prev => prev.map(u =>
+        u.id === editingUser.id
+          ? { ...u, username: editUsername.trim() || u.username }
+          : u
+      ))
+      setTimeout(() => {
+        setEditingUser(null)
+        setEditUsername('')
+        setEditPassword('')
+        setEditSuccess('')
+      }, 1500)
+    } catch (err: any) {
+      setEditError(err?.response?.data?.detail || 'Update failed')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -445,7 +484,7 @@ export default function Dashboard() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}> 
             <thead> 
               <tr style={{ borderBottom: '2px solid #F3F4F6' }}> 
-                {['#', 'Product', 'Platform', 'PS Engineer', 'Status', 'Date'].map(h => ( 
+                {['#', 'Product', 'Platform', 'PS Engineer', 'Date'].map(h => ( 
                   <th key={h} style={{ 
                     textAlign: 'left', 
                     padding: '10px 12px', 
@@ -483,19 +522,7 @@ export default function Dashboard() {
                     </span> 
                   </td> 
                   <td style={{ padding: '12px', fontSize: '14px' }}>{h.platform || 'N/A'}</td> 
-                  <td style={{ padding: '12px', fontSize: '14px' }}>{h.ps_engineer || 'N/A'}</td> 
-                  <td style={{ padding: '12px' }}> 
-                    <span style={{ 
-                      background: h.status === 'active' ? '#ECFDF5' : '#F3F4F6', 
-                      color: h.status === 'active' ? '#10B981' : '#6B7280', 
-                      padding: '3px 10px', 
-                      borderRadius: '12px', 
-                      fontSize: '13px', 
-                      fontWeight: 500 
-                    }}> 
-                      {h.status || 'active'} 
-                    </span> 
-                  </td> 
+                  <td style={{ padding: '12px', fontSize: '14px' }}>{h.ps_engineer || 'N/A'}</td>
                   <td style={{ padding: '12px', fontSize: '13px', color: '#6B7280' }}> 
                     {h.created_at ? new Date(h.created_at).toLocaleDateString() : 'N/A'} 
                   </td> 
@@ -528,7 +555,7 @@ export default function Dashboard() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
-                {['#', 'Full Name', 'Username', 'Email', 'Role', 'Status'].map(h => (
+                {['#', 'Full Name', 'Username', 'Email', 'Role', 'Status', 'Edit'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '13px', fontWeight: 600, color: '#6B7280' }}>{h}</th>
                 ))}
               </tr>
@@ -558,10 +585,109 @@ export default function Dashboard() {
                       {u.is_active !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
+                  <td style={{ padding: '12px' }}>
+                    <button
+                      onClick={() => {
+                        setEditingUser(u)
+                        setEditUsername(u.username)
+                        setEditPassword('')
+                        setEditError('')
+                        setEditSuccess('')
+                      }}
+                      style={{
+                        background: '#EEF2FF',
+                        color: '#4F46E5',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 14px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 600
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {editingUser && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <div style={{
+                background: 'white', borderRadius: '16px', padding: '32px',
+                width: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
+              }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>
+                  Edit Credentials
+                </h3>
+                <p style={{ margin: '0 0 24px', color: '#6B7280', fontSize: '14px' }}>
+                  Editing: <strong>{editingUser.full_name || editingUser.username}</strong>
+                </p>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+                    New Username
+                  </label>
+                  <input
+                    value={editUsername}
+                    onChange={e => setEditUsername(e.target.value)}
+                    style={{ width: '100%', height: '42px', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '0 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                    placeholder="Enter new username"
+                  />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={editPassword}
+                    onChange={e => setEditPassword(e.target.value)}
+                    style={{ width: '100%', height: '42px', border: '1.5px solid #E5E7EB', borderRadius: '8px', padding: '0 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                    placeholder="Min 8 chars, upper, lower, number, special"
+                  />
+                </div>
+                {editError && (
+                  <div style={{ background: '#FEF2F2', color: '#EF4444', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                    {editError}
+                  </div>
+                )}
+                {editSuccess && (
+                  <div style={{ background: '#ECFDF5', color: '#10B981', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                    {editSuccess}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={handleUpdateCredentials}
+                    disabled={editLoading}
+                    style={{
+                      flex: 1, height: '44px', background: '#4F46E5', color: 'white',
+                      border: 'none', borderRadius: '8px', fontWeight: 600,
+                      fontSize: '14px', cursor: editLoading ? 'not-allowed' : 'pointer',
+                      opacity: editLoading ? 0.7 : 1
+                    }}
+                  >
+                    {editLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => { setEditingUser(null); setEditError(''); setEditSuccess('') }}
+                    style={{
+                      flex: 1, height: '44px', background: '#F3F4F6', color: '#374151',
+                      border: 'none', borderRadius: '8px', fontWeight: 600,
+                      fontSize: '14px', cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

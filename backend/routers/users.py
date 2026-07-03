@@ -100,6 +100,51 @@ def update_user(
     }
 
 
+@router.put("/{user_id}/credentials")
+def update_user_credentials(
+    user_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    from core.security import get_password_hash
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_username = data.get("username", "").strip()
+    new_password = data.get("password", "").strip()
+
+    if new_username:
+        existing = db.query(User).filter(
+            User.username == new_username,
+            User.id != user_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        user.username = new_username
+
+    if new_password:
+        import re
+        pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$'
+        if not re.match(pattern, new_password):
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be at least 8 characters with uppercase, lowercase, number and special character"
+            )
+        user.hashed_password = get_password_hash(new_password)
+
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "role": user.role,
+        "message": "Credentials updated successfully"
+    }
+
+
 @router.put("/{user_id}/deactivate")
 def deactivate_user(
     user_id: int,
