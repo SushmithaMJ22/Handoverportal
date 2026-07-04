@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Text, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -100,3 +100,16 @@ class Document(Base):
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 
     handover = relationship("HandoverRecord", back_populates="documents")
+
+class BackupRecord(Base):
+    __tablename__ = "backup_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, unique=True, nullable=False)
+    file_path = Column(String, nullable=False)
+    size_bytes = Column(BigInteger, nullable=False)
+    status = Column(String, default="completed")  # completed, failed, in_progress
+    backup_type = Column(String, default="manual")  # manual, automatic
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    metadata_json = Column(Text, nullable=True)  # JSON string with backup metadata

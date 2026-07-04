@@ -9,6 +9,7 @@ import UserManagement from './pages/UserManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import CreateUserPage from './pages/CreateUserPage';
 import SuperAdminActivityPage from './pages/SuperAdminActivityPage';
+import SystemBackupPage from './pages/SystemBackupPage';
 import Layout from './components/Layout';
 import { useAuth } from './hooks/useAuth';
 
@@ -40,7 +41,7 @@ function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={
           user?.role === 'super_admin' 
-            ? <Navigate to="/create-user" replace /> 
+            ? <Navigate to="/dashboard" replace /> 
             : <Navigate to="/dashboard" replace />
         } />
         <Route path="dashboard" element={
@@ -86,6 +87,11 @@ function App() {
         <Route path="superadmin/activity" element={
           <ProtectedRoute roles={['super_admin']}>
             <SuperAdminActivityPage />
+          </ProtectedRoute>
+        } />
+        <Route path="system-backup" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <SystemBackupPage />
           </ProtectedRoute>
         } />
       </Route>

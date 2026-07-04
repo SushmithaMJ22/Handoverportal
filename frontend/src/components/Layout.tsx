@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Building2, BarChart3, Users, LogOut, FileText, Menu } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Building2, BarChart3, Users, LogOut, FileText, Menu, Database } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const Layout = () => {
@@ -15,17 +15,17 @@ const Layout = () => {
     { label: 'Reports', icon: BarChart3, path: '/reports', roles: ['super_admin', 'admin', 'user'] },
     { label: 'User Management', icon: Users, path: '/users', roles: ['super_admin'] },
     { label: 'Activity Log', icon: FileText, path: '/superadmin/activity', roles: ['super_admin'] },
+    { label: 'System Backup', icon: Database, path: '/system-backup', roles: ['super_admin'] },
   ];
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      {!isSuperAdmin && (
-        <aside
-          className={`${
-            isSidebarOpen ? 'w-64' : 'w-20'
-          } bg-white border-r border-gray-200 transition-all duration-300 flex flex-col z-50`}
-        >
+      <aside
+        className={`${
+          isSidebarOpen ? 'w-64' : 'w-20'
+        } bg-white border-r border-gray-200 transition-all duration-300 flex flex-col z-50`}
+      >
           {/* Logo Section */}
           <div className="p-6 flex items-center gap-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0">
@@ -97,21 +97,18 @@ const Layout = () => {
             )}
           </div>
         </aside>
-      )}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-40">
           <div className="flex items-center gap-4">
-            {!isSuperAdmin && (
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <h1 className="text-xl font-bold text-gray-900 capitalize">
               {location.pathname.split('/')[1] || 'Dashboard'}
             </h1>

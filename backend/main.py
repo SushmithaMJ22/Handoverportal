@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings, validate_configuration
 from database import engine, Base
-from routers import auth, handovers, reports, users, customers, meta
+from routers import auth, handovers, reports, users, customers, meta, backup
+from services.backup_scheduler import scheduler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +41,22 @@ app.include_router(customers.router)
 app.include_router(handovers.router)
 app.include_router(reports.router)
 app.include_router(meta.router)
+app.include_router(backup.router)
+
+
+@app.on_event("startup")
+def startup_event():
+    """Start the backup scheduler on application startup."""
+    from database import SessionLocal
+    scheduler.start(SessionLocal)
+    logging.info("Backup scheduler started on application startup")
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    """Stop the backup scheduler on application shutdown."""
+    scheduler.stop()
+    logging.info("Backup scheduler stopped on application shutdown")
 
 
 @app.get("/")

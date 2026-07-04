@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install postgresql-client for pg_isready healthcheck in entrypoint
+# Install postgresql-client for pg_dump and pg_isready
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
@@ -16,6 +16,9 @@ COPY . .
 
 # Make entrypoint executable
 RUN chmod +x entrypoint.sh
+
+# Create backup directory
+RUN mkdir -p /app/backups
 
 EXPOSE 8000
 

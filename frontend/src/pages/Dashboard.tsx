@@ -215,60 +215,6 @@ export default function Dashboard() {
  
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
-        {isSuperAdmin && (
-          <button
-            onClick={() => navigate('/users')}
-            style={{
-              background: 'linear-gradient(135deg, #059669, #047857)',
-              color: 'white',
-              padding: '12px 28px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '15px',
-              boxShadow: '0 4px 12px rgba(5,150,105,0.4)'
-            }}
-          >
-            👥 Manage Users
-          </button>
-        )}
-        {isSuperAdmin && (
-          <button
-            onClick={() => navigate('/superadmin/activity')}
-            style={{
-              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-              color: 'white',
-              padding: '12px 28px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '15px',
-              boxShadow: '0 4px 12px rgba(124,58,237,0.4)'
-            }}
-          >
-            📊 Activity Log
-          </button>
-        )}
-        {isSuperAdmin && (
-          <button
-            onClick={() => navigate('/reports')}
-            style={{
-              background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
-              color: 'white',
-              padding: '12px 28px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '15px',
-              boxShadow: '0 4px 12px rgba(79,70,229,0.4)'
-            }}
-          >
-            📄 Export Report
-          </button>
-        )}
         {isAdmin && (
           <button
             onClick={() => navigate('/handovers/new')} 

@@ -166,3 +166,45 @@ class ReportSummary(BaseModel):
     by_product: dict
     by_region: dict
     recent_activity: List[HandoverOut]
+
+# Backup Schemas
+class BackupMetadata(BaseModel):
+    backup_version: str = "1.0"
+    backup_date: str
+    application_version: str = "1.0"
+    database_version: str
+    includes_uploads: bool = True
+    total_files: int = 0
+
+class BackupCreate(BaseModel):
+    backup_type: str = "manual"  # manual or automatic
+
+class BackupOut(BaseModel):
+    id: int
+    filename: str
+    file_path: str
+    size_bytes: int
+    status: str
+    backup_type: str
+    created_at: datetime
+    created_by: Optional[int] = None
+    metadata: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+class BackupStatus(BaseModel):
+    last_backup_date: Optional[datetime] = None
+    next_scheduled_backup: Optional[datetime] = None
+    total_backups: int
+    backup_location: str
+    last_backup_size: Optional[int] = None
+    scheduler_enabled: bool = True
+    scheduler_frequency: str = "weekly"  # daily, weekly, monthly
+
+class RestoreRequest(BaseModel):
+    backup_id: int
+
+class SchedulerConfig(BaseModel):
+    enabled: bool = True
+    frequency: str = "weekly"  # daily, weekly, monthly
