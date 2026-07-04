@@ -45,7 +45,7 @@ const CustomerManagement = () => {
       if (editingCustomer) {
         await api.put(`/customers/${editingCustomer.id}`, formData);
       } else {
-        await api.post('/customers/', formData);
+        await api.post('/customers', formData);
       }
       setShowModal(false);
       setEditingCustomer(null);

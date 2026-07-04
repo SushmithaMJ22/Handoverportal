@@ -251,6 +251,24 @@ export default function Dashboard() {
             📊 Activity Log
           </button>
         )}
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/reports')}
+            style={{
+              background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+              color: 'white',
+              padding: '12px 28px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '15px',
+              boxShadow: '0 4px 12px rgba(79,70,229,0.4)'
+            }}
+          >
+            📄 Export Report
+          </button>
+        )}
         {isAdmin && (
           <button
             onClick={() => navigate('/handovers/new')} 
