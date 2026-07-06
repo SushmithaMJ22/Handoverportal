@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, X, Upload, FileText, Trash2, Loader2 } from 'lucide-react';
+import { Save, X, Upload, FileText, Trash2, Loader2, Plus } from 'lucide-react';
 import api from '../api/axios';
 
 const HandoverForm = () => {
@@ -28,6 +28,18 @@ const HandoverForm = () => {
     status: 'active'
   });
 
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    product: '',
+    platform: '',
+    sub_product: '',
+    solution: ''
+  });
+  const [productModalError, setProductModalError] = useState('');
+  const [productModalSubmitted, setProductModalSubmitted] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
   const [files, setFiles] = useState<any[]>([]);
   const [submitted, setSubmitted] = useState(false);
 
@@ -43,7 +55,8 @@ const HandoverForm = () => {
   const fetchHandover = async () => {
     try {
       const res = await api.get(`/handovers/${id}`);
-      setFormData(res.data);
+      const data = res.data;
+      setFormData(data);
     } catch (err) {
       console.error('Failed to fetch handover:', err);
     }
@@ -65,6 +78,83 @@ const HandoverForm = () => {
       sub_product: '',
       solution: ''
     });
+  };
+
+  const handleAddNewProduct = () => {
+    setShowProductModal(true);
+    setNewProduct({
+      product: '',
+      platform: '',
+      sub_product: '',
+      solution: ''
+    });
+    setProductModalError('');
+    setProductModalSubmitted(false);
+  };
+
+  const handleSaveProduct = async () => {
+    setProductModalSubmitted(true);
+    
+    if (!newProduct.product.trim()) {
+      setProductModalError('Product Name is required');
+      return;
+    }
+    if (!newProduct.platform.trim()) {
+      setProductModalError('Platform is required');
+      return;
+    }
+    
+    setProductModalError('');
+    
+    try {
+      const response = await api.post('/meta/products', {
+        product: newProduct.product.trim(),
+        platform: newProduct.platform.trim(),
+        sub_product: newProduct.sub_product.trim(),
+        solution: newProduct.solution.trim()
+      });
+      
+      // Refresh taxonomy
+      await fetchTaxonomy();
+      
+      // Select the product (either newly created or existing)
+      const productToSelect = response.data.product;
+      setFormData({
+        ...formData,
+        product: productToSelect,
+        platform: response.data.platform,
+        sub_product: response.data.sub_product,
+        solution: response.data.solution
+      });
+      
+      // Close modal
+      setShowProductModal(false);
+      
+      // Show success toast
+      if (response.data.existed) {
+        setToastMessage(`Product '${productToSelect}' already exists. It has been selected.`);
+      } else {
+        setToastMessage(`Product '${productToSelect}' added successfully.`);
+      }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to create product:', err);
+      const detail = err.response?.data?.detail;
+      setProductModalError(typeof detail === 'string' ? detail : 'Failed to create product');
+    }
+  };
+
+  const handleCancelProduct = () => {
+    setShowProductModal(false);
+    setNewProduct({
+      product: '',
+      platform: '',
+      sub_product: '',
+      solution: ''
+    });
+    setProductModalError('');
+    setProductModalSubmitted(false);
   };
 
   const handlePlatformChange = (e: any) => {
@@ -108,9 +198,9 @@ const HandoverForm = () => {
         setError('Region is required') 
         return 
       } 
-      if (!formData.product) { 
-        setError('Product is required') 
-        return 
+      if (!formData.product) {
+        setError('Product is required')
+        return
       } 
 
       setLoading(true) 
@@ -302,10 +392,18 @@ const HandoverForm = () => {
                 !formData.product && submitted ? 'border-red-500' : 'border-gray-300'
               }`}
               value={formData.product}
-              onChange={handleProductChange}
+              onChange={(e) => {
+                if (e.target.value === '__add_new__') {
+                  e.preventDefault();
+                  handleAddNewProduct();
+                } else {
+                  handleProductChange(e);
+                }
+              }}
             >
               <option value="">Select Product</option>
               {taxonomy && Object.keys(taxonomy).map(p => <option key={p} value={p}>{p}</option>)}
+              <option value="__add_new__" className="text-gray-500 font-normal border-t border-gray-200 pt-2">➕ Add New Product...</option>
             </select>
           </div>
 
@@ -458,6 +556,113 @@ const HandoverForm = () => {
           Save Handover
         </button>
       </div>
+
+      {/* Add New Product Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Add New Product</h3>
+              <button
+                type="button"
+                onClick={handleCancelProduct}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {productModalError && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md mb-4">
+                <p className="text-sm text-red-700">{productModalError}</p>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Product Name *</label>
+                <input
+                  type="text"
+                  placeholder="Enter product name"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none ${
+                    productModalSubmitted && !newProduct.product.trim() ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  value={newProduct.product}
+                  onChange={(e) => setNewProduct({...newProduct, product: e.target.value})}
+                />
+                {productModalSubmitted && !newProduct.product.trim() && (
+                  <p className="text-red-500 text-xs mt-1">Product Name is required</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Platform *</label>
+                <input
+                  type="text"
+                  placeholder="Enter platform"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none ${
+                    productModalSubmitted && !newProduct.platform.trim() ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  value={newProduct.platform}
+                  onChange={(e) => setNewProduct({...newProduct, platform: e.target.value})}
+                />
+                {productModalSubmitted && !newProduct.platform.trim() && (
+                  <p className="text-red-500 text-xs mt-1">Platform is required</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Sub Product</label>
+                <input
+                  type="text"
+                  placeholder="Enter sub product (optional)"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none border-gray-300"
+                  value={newProduct.sub_product}
+                  onChange={(e) => setNewProduct({...newProduct, sub_product: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Solution</label>
+                <input
+                  type="text"
+                  placeholder="Enter solution (optional)"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none border-gray-300"
+                  value={newProduct.solution}
+                  onChange={(e) => setNewProduct({...newProduct, solution: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={handleCancelProduct}
+                className="px-4 py-2 border rounded-lg font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProduct}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Save Product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in-up z-50">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {toastMessage}
+        </div>
+      )}
     </form>
   );
 };

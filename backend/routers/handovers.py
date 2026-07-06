@@ -29,6 +29,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/handovers", tags=["handovers"])
 
 
+def _parse_csv(value: str) -> list:
+    """Split a comma-separated string into a stripped list, ignoring empty entries."""
+    if not value:
+        return []
+    return [v.strip() for v in value.split(",") if v.strip()]
+
+
 # ---------------------------------------------------------------------------
 # Local schema (separate from schemas.HandoverCreate to allow optional fields)
 # ---------------------------------------------------------------------------
@@ -196,6 +203,16 @@ def create_handover(
     current_user: User = Depends(require_admin_or_above),
 ):
     try:
+        # Validate taxonomy for the product
+        if data.product:
+            validate_taxonomy(
+                db,
+                data.product,
+                data.sub_product,
+                data.platform,
+                data.solution,
+            )
+        
         handover = HandoverRecord(
             customer_name=data.customer_name,
             contact_person=data.contact_person,
@@ -308,14 +325,22 @@ def update_handover(
 
     update_data = handover_in.model_dump(exclude_unset=True)
 
+    # Check if product fields are being updated
     if any(k in update_data for k in ["product", "sub_product", "platform", "solution"]):
-        validate_taxonomy(
-            db,
-            update_data.get("product", db_handover.product),
-            update_data.get("sub_product", db_handover.sub_product),
-            update_data.get("platform", db_handover.platform),
-            update_data.get("solution", db_handover.solution),
-        )
+        product = update_data.get("product", db_handover.product)
+        sub_product = update_data.get("sub_product", db_handover.sub_product)
+        platform = update_data.get("platform", db_handover.platform)
+        solution = update_data.get("solution", db_handover.solution)
+        
+        # Validate taxonomy for the product
+        if product:
+            validate_taxonomy(
+                db,
+                product,
+                sub_product,
+                platform,
+                solution,
+            )
 
     for field, value in update_data.items():
         setattr(db_handover, field, value)
