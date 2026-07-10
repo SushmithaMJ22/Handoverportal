@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { BarChart3, Download, FileText, Table as TableIcon, Calendar, Loader2 } from 'lucide-react';
 import api from '../api/axios';
+import { useToast } from '../components/ui/ToastProvider';
 
 const ReportsPage = () => {
+  const { showError, showSuccess } = useToast();
   const [period, setPeriod] = useState('30d');
   const [loading, setLoading] = useState(false);
 
   const handleExport = async (format: string) => { 
+    setLoading(true);
     try { 
       const token = localStorage.getItem('token') 
       const response = await fetch(`/api/reports/export?period=${period}&format=${format}`, {
@@ -29,10 +32,13 @@ const ReportsPage = () => {
       a.click() 
       window.URL.revokeObjectURL(url) 
       document.body.removeChild(a) 
+      showSuccess('Report exported successfully!');
   
     } catch (err: any) { 
-      alert(err.message || 'Error generating report') 
-    } 
+      showError(err.message || 'Error generating report') 
+    } finally {
+      setLoading(false);
+    }
   } 
 
   return (

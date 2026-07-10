@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Building2, Plus, Edit2, Trash2, Mail, Phone, MapPin, X, Loader2, User } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../components/ui/ToastProvider';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 
 const REGIONS = [
   "North America", "South America", "Europe", "Middle East", 
@@ -9,6 +11,7 @@ const REGIONS = [
 ];
 
 const CustomerManagement = () => {
+  const { showSuccess, showError } = useToast();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -20,6 +23,8 @@ const CustomerManagement = () => {
     email: '',
     region: 'North America'
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   const { isAdmin, isSuperAdmin } = useAuth();
   const canManage = isAdmin || isSuperAdmin;
@@ -44,26 +49,38 @@ const CustomerManagement = () => {
     try {
       if (editingCustomer) {
         await api.put(`/customers/${editingCustomer.id}`, formData);
+        showSuccess('Customer updated successfully!');
       } else {
         await api.post('/customers', formData);
+        showSuccess('Customer created successfully!');
       }
       setShowModal(false);
       setEditingCustomer(null);
       setFormData({ name: '', contact_person: '', phone: '', email: '', region: 'North America' });
       fetchCustomers();
     } catch (err) {
-      alert('Error saving customer');
+      showError('Error saving customer');
     }
   };
 
   const deleteCustomer = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      try {
-        await api.delete(`/customers/${id}`);
-        fetchCustomers();
-      } catch (err) {
-        alert('Error deleting customer');
-      }
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (showDeleteConfirm === null) return;
+    
+    setDeletingCustomer(true);
+    
+    try {
+      await api.delete(`/customers/${showDeleteConfirm}`);
+      showSuccess('Customer deleted successfully!');
+      fetchCustomers();
+    } catch (err) {
+      showError('Error deleting customer');
+    } finally {
+      setDeletingCustomer(false);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -146,7 +163,8 @@ const CustomerManagement = () => {
                       </button>
                       <button
                         onClick={() => deleteCustomer(c.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        disabled={deletingCustomer}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors disabled:text-gray-300 disabled:cursor-not-allowed"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -242,6 +260,18 @@ const CustomerManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm !== null}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete Customer"
+        message="Are you sure you want to delete this customer? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deletingCustomer}
+        type="danger"
+      />
     </div>
   );
 };

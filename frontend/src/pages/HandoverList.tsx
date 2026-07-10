@@ -2,15 +2,20 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom' 
 import { useAuth } from '../hooks/useAuth' 
 import api from '../api/axios' 
+import { useToast } from '../components/ui/ToastProvider';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'; 
 
 export default function HandoverList() { 
   const { isAdmin, isSuperAdmin } = useAuth() 
+  const { showSuccess, showError } = useToast();
   const navigate = useNavigate() 
   const [handovers, setHandovers] = useState<any[]>([]) 
   const [total, setTotal] = useState(0) 
   const [loading, setLoading] = useState(true) 
   const [search, setSearch] = useState('') 
-  const [product, setProduct] = useState('all') 
+  const [product, setProduct] = useState('all')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const [deletingHandover, setDeletingHandover] = useState(false); 
 
   useEffect(() => { 
     fetchHandovers() 
@@ -45,14 +50,23 @@ export default function HandoverList() {
   } 
 
   const handleDelete = async (id: number) => { 
-    if (!confirm('Delete this handover?')) return 
-    try { 
-      await api.delete(`/handovers/${id}`) 
-      fetchHandovers() 
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (showDeleteConfirm === null) return;
+    setDeletingHandover(true);
+    try {
+      await api.delete(`/handovers/${showDeleteConfirm}`);
+      showSuccess('Handover deleted successfully!');
+      fetchHandovers();
     } catch (err) { 
-      alert('Failed to delete') 
-    } 
-  } 
+      showError('Failed to delete handover');
+    } finally {
+      setDeletingHandover(false);
+      setShowDeleteConfirm(null);
+    }
+  }; 
 
   return ( 
     <div style={{ padding: '24px' }}> 
@@ -196,7 +210,8 @@ export default function HandoverList() {
                         >✏️</button> 
                         <button 
                           onClick={e => { e.stopPropagation(); handleDelete(h.id) }} 
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }} 
+                          disabled={deletingHandover}
+                          style={{ background: 'none', border: 'none', cursor: deletingHandover ? 'not-allowed' : 'pointer', fontSize: '16px', opacity: deletingHandover ? 0.5 : 1 }} 
                         >🗑️</button> 
                       </> 
                     )} 
@@ -214,6 +229,18 @@ export default function HandoverList() {
           </div> 
         )} 
       </div> 
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm !== null}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete Handover"
+        message="Are you sure you want to delete this handover? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deletingHandover}
+        type="danger"
+      />
     </div> 
   ) 
 } 

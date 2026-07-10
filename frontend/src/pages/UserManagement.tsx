@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Users, UserPlus, Shield, Mail, Trash2, Edit2, Check, X, Loader2, User, UserMinus, UserCheck } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../components/ui/ToastProvider';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 
 const validatePasswordStrength = (password: string): string | null => {
   if (password.length < 8) {
@@ -23,6 +25,7 @@ const validatePasswordStrength = (password: string): string | null => {
 }
 
 const UserManagement = () => {
+  const { showSuccess, showError } = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -36,6 +39,8 @@ const UserManagement = () => {
     role: 'user'
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const { isSuperAdmin } = useAuth();
 
@@ -59,7 +64,7 @@ const UserManagement = () => {
     setPasswordError(null);
     
     if (!editingUser && formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      showError("Passwords do not match");
       return;
     }
 
@@ -74,6 +79,7 @@ const UserManagement = () => {
     try {
       if (editingUser) {
         await api.put(`/users/${editingUser.id}?role=${formData.role}`);
+        showSuccess('User role updated successfully!');
       } else {
         await api.post('/users/', {
           full_name: formData.full_name,
@@ -82,6 +88,7 @@ const UserManagement = () => {
           password: formData.password,
           role: formData.role
         });
+        showSuccess('User created successfully!');
       }
       setShowModal(false);
       setEditingUser(null);
@@ -93,7 +100,7 @@ const UserManagement = () => {
       const message = Array.isArray(detail) 
         ? detail.map((d: any) => d.msg).join(', ') 
         : (typeof detail === 'string' ? detail : 'Error saving user');
-      alert(message);
+      showError(message);
     }
   };
 
@@ -101,8 +108,10 @@ const UserManagement = () => {
     try {
       if (u.is_active) {
         await api.put(`/users/${u.id}/deactivate`);
+        showSuccess('User deactivated successfully!');
       } else {
         await api.put(`/users/${u.id}/reactivate`);
+        showSuccess('User reactivated successfully!');
       }
       fetchUsers();
     } catch (err: any) {
@@ -110,20 +119,30 @@ const UserManagement = () => {
       const message = Array.isArray(detail) 
         ? detail.map((d: any) => d.msg).join(', ') 
         : (typeof detail === 'string' ? detail : 'Error updating user status');
-      alert(message);
+      showError(message);
     }
   };
 
   const handleDelete = async (u: any) => {
-    if (window.confirm("Are you sure you want to delete this user? This cannot be undone.")) {
-      try {
-        await api.delete(`/users/${u.id}`);
-        fetchUsers();
-      } catch (err: any) {
-        const detail = err.response?.data?.detail;
-        const message = typeof detail === 'string' ? detail : 'Error deleting user';
-        alert(message);
-      }
+    setShowDeleteConfirm(u);
+  };
+
+  const confirmDelete = async () => {
+    if (!showDeleteConfirm) return;
+    
+    setDeletingUser(true);
+    
+    try {
+      await api.delete(`/users/${showDeleteConfirm.id}`);
+      showSuccess('User deleted successfully!');
+      fetchUsers();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : 'Error deleting user';
+      showError(message);
+    } finally {
+      setDeletingUser(false);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -223,7 +242,8 @@ const UserManagement = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(u)}
-                          className="font-medium text-sm text-red-600 hover:text-red-900"
+                          disabled={deletingUser}
+                          className="font-medium text-sm text-red-600 hover:text-red-900 disabled:text-gray-400 disabled:cursor-not-allowed"
                         >
                           Delete
                         </button>
@@ -344,6 +364,18 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm !== null}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deletingUser}
+        type="danger"
+      />
     </div>
   );
 };

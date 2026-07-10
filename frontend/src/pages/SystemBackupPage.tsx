@@ -11,10 +11,14 @@ import {
   CheckCircle,
   Settings,
   Play,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  Copy
 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/ui/ToastProvider';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 
 interface BackupRecord {
   id: number;
@@ -40,12 +44,17 @@ interface BackupStatus {
 
 const SystemBackupPage = () => {
   const { isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [restoringBackup, setRestoringBackup] = useState<number | null>(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState<number | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  const [deletingBackup, setDeletingBackup] = useState<number | null>(null);
   const [schedulerConfig, setSchedulerConfig] = useState({
     enabled: true,
     frequency: 'weekly'
@@ -71,9 +80,12 @@ const SystemBackupPage = () => {
 
   useEffect(() => {
     if (isSuperAdmin) {
-      fetchStatus();
-      fetchBackups();
-      setLoading(false);
+      const loadData = async () => {
+        setLoading(true);
+        await Promise.all([fetchStatus(), fetchBackups()]);
+        setLoading(false);
+      };
+      loadData();
     }
   }, [isSuperAdmin]);
 
@@ -96,10 +108,10 @@ const SystemBackupPage = () => {
       await api.post('/backup/create');
       await fetchStatus();
       await fetchBackups();
-      alert('Backup created successfully!');
+      showSuccess('Backup created successfully!');
     } catch (err: any) {
       console.error('Error creating backup:', err);
-      alert(err.response?.data?.detail || 'Failed to create backup');
+      showError(err.response?.data?.detail || 'Failed to create backup');
     } finally {
       setCreatingBackup(false);
     }
@@ -120,21 +132,30 @@ const SystemBackupPage = () => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading backup:', err);
-      alert('Failed to download backup');
+      showError('Failed to download backup');
     }
   };
 
   const handleDelete = async (backupId: number) => {
-    if (!confirm('Are you sure you want to delete this backup?')) return;
+    setShowDeleteConfirm(backupId);
+  };
+
+  const confirmDelete = async () => {
+    if (showDeleteConfirm === null) return;
+    
+    setDeletingBackup(showDeleteConfirm);
     
     try {
-      await api.delete(`/backup/${backupId}`);
+      await api.delete(`/backup/${showDeleteConfirm}`);
       await fetchStatus();
       await fetchBackups();
-      alert('Backup deleted successfully!');
+      showSuccess('Backup deleted successfully!');
     } catch (err) {
       console.error('Error deleting backup:', err);
-      alert('Failed to delete backup');
+      showError('Failed to delete backup');
+    } finally {
+      setDeletingBackup(null);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -149,26 +170,58 @@ const SystemBackupPage = () => {
     setShowRestoreConfirm(null);
     
     try {
-      const res = await api.post('/backup/restore', { backup_id: showRestoreConfirm });
-      alert(`Restore completed successfully!\n\n${res.data.message}`);
+      const backup = backups.find(b => b.id === showRestoreConfirm);
+      
+      // If backup has no database record (id = -1), use filename-based restore
+      if (backup && backup.id === -1) {
+        const res = await api.post('/backup/restore-by-filename', { filename: backup.filename });
+        setRestoreSuccess(res.data);
+      } else {
+        const res = await api.post('/backup/restore', { backup_id: showRestoreConfirm });
+        setRestoreSuccess(res.data);
+      }
+      
       await fetchStatus();
       await fetchBackups();
     } catch (err: any) {
       console.error('Error restoring backup:', err);
-      alert(err.response?.data?.detail || 'Failed to restore backup');
+      showError(err.response?.data?.detail || 'Failed to restore backup');
     } finally {
       setRestoringBackup(null);
     }
+  };
+
+  const handleCopyBackupPath = () => {
+    const backupPath = status?.backup_location || '';
+    
+    try {
+      navigator.clipboard.writeText(backupPath).then(() => {
+        showSuccess('Backup path copied to clipboard.');
+      }).catch((err) => {
+        console.error('Failed to copy to clipboard:', err);
+        showError('Failed to copy to clipboard. Please copy manually.');
+      });
+    } catch (err) {
+      console.error('Clipboard error:', err);
+      showError('Failed to copy to clipboard. Please copy manually.');
+    }
+  };
+
+  const handleLoginRedirect = () => {
+    // Clear auth state and redirect to login
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   const handleSchedulerUpdate = async () => {
     try {
       await api.put('/backup/scheduler/config', schedulerConfig);
       await fetchStatus();
-      alert('Scheduler configuration updated successfully!');
+      showSuccess('Scheduler configuration updated successfully!');
     } catch (err) {
       console.error('Error updating scheduler:', err);
-      alert('Failed to update scheduler configuration');
+      showError('Failed to update scheduler configuration');
     }
   };
 
@@ -266,10 +319,20 @@ const SystemBackupPage = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
                 <Database className="w-4 h-4" />
-                Location
+                Backup Location
               </div>
-              <div className="text-sm font-semibold text-gray-900 truncate">
-                {status.backup_location}
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-semibold text-gray-900 truncate flex-1">
+                  {status.backup_location || ''}
+                </div>
+                <button
+                  onClick={handleCopyBackupPath}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Copy backup path"
+                >
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </button>
               </div>
             </div>
           </div>
@@ -394,10 +457,11 @@ const SystemBackupPage = () => {
                       </button>
                       <button
                         onClick={() => handleDelete(backup.id)}
-                        className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
-                        title="Delete"
+                        disabled={deletingBackup === backup.id || backup.id === -1}
+                        className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded disabled:text-gray-400 disabled:cursor-not-allowed"
+                        title={backup.id === -1 ? "Cannot delete backup without database record" : "Delete"}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className={`w-4 h-4 ${deletingBackup === backup.id ? 'animate-spin' : ''}`} />
                       </button>
                     </td>
                   </tr>
@@ -411,32 +475,113 @@ const SystemBackupPage = () => {
       {/* Restore Confirmation Modal */}
       {showRestoreConfirm !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-yellow-500" />
-              <h3 className="text-lg font-semibold text-gray-900">Confirm Restore</h3>
+              <h3 className="text-lg font-bold text-gray-900">⚠ Restore Backup</h3>
             </div>
-            <p className="text-gray-600 mb-6">
-              Restoring will replace the current database and uploaded documents with the selected backup. 
-              This action cannot be undone. A pre-restore backup will be created automatically.
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">You are about to restore:</p>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="font-medium text-gray-900">{backups.find(b => b.id === showRestoreConfirm)?.filename}</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">
+              This will replace the current database and uploaded documents with the contents of this backup.
+              Any changes made after this backup was created will be permanently lost.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              A pre-restore backup will be created automatically to allow rollback if needed.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowRestoreConfirm(null)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmRestore}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                disabled={restoringBackup !== null}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
-                Restore System
+                {restoringBackup !== null ? 'Restoring...' : 'Restore'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Restore Success Modal */}
+      {restoreSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <CheckCircle className="w-6 h-6 text-green-500" />
+              <h3 className="text-lg font-bold text-gray-900">System Restored Successfully</h3>
+            </div>
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">Backup:</p>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="font-medium text-gray-900">{restoreSuccess.backup_filename}</p>
+              </div>
+            </div>
+            <div className="mb-6">
+              <p className="text-gray-600 mb-2">Restored:</p>
+              <ul className="space-y-1 text-sm text-gray-600">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Users
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Customers
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Handovers
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Uploaded Documents
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Product Taxonomy
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  System Settings
+                </li>
+              </ul>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Please login again to continue.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={handleLoginRedirect}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm !== null}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete Backup"
+        message="This backup will be permanently deleted. This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deletingBackup !== null}
+        type="danger"
+      />
     </div>
   );
 };

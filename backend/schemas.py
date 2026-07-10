@@ -205,6 +205,9 @@ class BackupStatus(BaseModel):
 class RestoreRequest(BaseModel):
     backup_id: int
 
+class RestoreByFilenameRequest(BaseModel):
+    filename: str
+
 class SchedulerConfig(BaseModel):
     enabled: bool = True
     frequency: str = "weekly"  # daily, weekly, monthly

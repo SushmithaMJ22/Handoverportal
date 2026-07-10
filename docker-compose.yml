@@ -8,6 +8,10 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: handover_db
+
+    ports:
+      - "5433:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,14 +37,20 @@ services:
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       STORAGE_MODE: ${STORAGE_MODE:-local}
       UPLOAD_DIR: /app/uploads
+      # Docker internal paths (for file operations inside container)
+      BACKUP_DIR: /app/backups
+      LOCAL_UPLOADS_DIR: /app/uploads
+      # Windows host paths (set from .env file)
+      BACKUP_DIR_HOST: ${BACKUP_DIR_HOST}
+      UPLOADS_DIR_HOST: ${UPLOADS_DIR_HOST}
       # S3 settings (only needed when STORAGE_MODE=s3)
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
     volumes:
-      - uploads_data:/app/uploads
-      - backups_data:/app/backups
+      - ${BACKUP_DIR_HOST}:/app/backups
+      - ${UPLOADS_DIR_HOST}:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -67,5 +77,3 @@ networks:
 
 volumes:
   postgres_data:
-  uploads_data:
-  backups_data:

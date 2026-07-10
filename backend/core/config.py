@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     AWS_REGION: Optional[str] = "us-east-1"
     STORAGE_MODE: Optional[str] = "local"
     UPLOAD_DIR: Optional[str] = "./uploads"
+    
+    # Docker internal paths (for file operations inside container)
+    BACKUP_DIR: Optional[str] = "/app/backups"
+    LOCAL_UPLOADS_DIR: Optional[str] = "/app/uploads"
+    
+    # Windows host paths (for display and Docker volume mounts)
+    # These are read from .env file and used for Docker volume mounts
+    BACKUP_DIR_HOST: Optional[str] = None
+    UPLOADS_DIR_HOST: Optional[str] = None
 
     class Config:
         env_file = ".env"

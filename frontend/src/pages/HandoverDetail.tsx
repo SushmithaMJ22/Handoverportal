@@ -3,12 +3,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FileText, Download, Edit, ArrowLeft, Calendar, User, MapPin, Tag, Clipboard, MessageSquare, Trash2 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../components/ui/ToastProvider';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 
 const HandoverDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [handover, setHandover] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingHandover, setDeletingHandover] = useState(false);
   const { isAdmin, isSuperAdmin } = useAuth();
 
   useEffect(() => {
@@ -26,13 +31,20 @@ const HandoverDetail = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this record?')) {
-      try {
-        await api.delete(`/handovers/${id}`);
-        navigate('/handovers');
-      } catch (e) {
-        alert('Error deleting handover');
-      }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setDeletingHandover(true);
+    try {
+      await api.delete(`/handovers/${id}`);
+      showSuccess('Handover deleted successfully!');
+      navigate('/handovers');
+    } catch (e) {
+      showError('Error deleting handover');
+    } finally {
+      setDeletingHandover(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -42,7 +54,6 @@ const HandoverDetail = () => {
       if (res.data.url) {
         window.open(res.data.url, '_blank');
       } else {
-        // Local file response
         const response = await api.get(`/handovers/${id}/documents/${docId}`, {
           responseType: 'blob'
         });
@@ -54,7 +65,7 @@ const HandoverDetail = () => {
         link.click();
       }
     } catch (err) {
-      alert('Error downloading file');
+      showError('Error downloading file');
     }
   };
 
@@ -75,7 +86,8 @@ const HandoverDetail = () => {
           <div className="flex gap-3">
             <button
               onClick={handleDelete}
-              className="bg-red-50 text-red-600 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-100 transition-colors border border-red-200"
+              disabled={deletingHandover}
+              className="bg-red-50 text-red-600 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-100 transition-colors border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
               Delete Record
@@ -233,6 +245,18 @@ const HandoverDetail = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Handover"
+        message="Are you sure you want to delete this record? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={deletingHandover}
+        type="danger"
+      />
     </div>
   );
 };

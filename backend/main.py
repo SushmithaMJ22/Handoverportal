@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings, validate_configuration
@@ -48,6 +49,36 @@ app.include_router(backup.router)
 def startup_event():
     """Start the backup scheduler on application startup."""
     from database import SessionLocal
+    
+    # Log configuration paths
+    logging.info(f"Windows Backup Path: {settings.BACKUP_DIR_HOST}")
+    logging.info(f"Windows Uploads Path: {settings.UPLOADS_DIR_HOST}")
+    logging.info(f"Docker Backup Path: {settings.BACKUP_DIR}")
+    logging.info(f"Docker Uploads Path: {settings.LOCAL_UPLOADS_DIR}")
+    
+    # Ensure Docker internal directories exist
+    try:
+        Path(settings.BACKUP_DIR).mkdir(parents=True, exist_ok=True)
+        Path(settings.LOCAL_UPLOADS_DIR).mkdir(parents=True, exist_ok=True)
+        logging.info("Docker internal directories ensured")
+    except Exception as e:
+        logging.error(f"Failed to create Docker internal directories: {str(e)}")
+        # Continue anyway - Docker volumes should handle this
+    
+    # Synchronize backup history from filesystem
+    try:
+        db = SessionLocal()
+        try:
+            from services.backup_service import BackupService
+            backup_service = BackupService()
+            backup_service.sync_backup_history(db)
+            logging.info("Backup history synchronized from filesystem")
+        finally:
+            db.close()
+    except Exception as e:
+        logging.error(f"Error synchronizing backup history: {str(e)}")
+        # Continue anyway - this is not critical
+    
     scheduler.start(SessionLocal)
     logging.info("Backup scheduler started on application startup")
 

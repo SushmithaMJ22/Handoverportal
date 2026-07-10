@@ -19,7 +19,9 @@ class StorageService:
 
     async def save_file(self, file: UploadFile, sub_dir: str) -> str:
         if self.mode == "local":
-            upload_path = os.path.join(settings.UPLOAD_DIR, sub_dir)
+            # Use LOCAL_UPLOADS_DIR which maps to Windows Documents folder
+            upload_dir = settings.LOCAL_UPLOADS_DIR or settings.UPLOAD_DIR
+            upload_path = os.path.join(upload_dir, sub_dir)
             os.makedirs(upload_path, exist_ok=True)
             file_path = os.path.join(upload_path, file.filename)
             

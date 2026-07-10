@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, X, Upload, FileText, Trash2, Loader2, Plus } from 'lucide-react';
 import api from '../api/axios';
+import { useToast } from '../components/ui/ToastProvider';
 
 const HandoverForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(false);
   const [taxonomy, setTaxonomy] = useState<any>(null);
   
@@ -37,8 +39,6 @@ const HandoverForm = () => {
   });
   const [productModalError, setProductModalError] = useState('');
   const [productModalSubmitted, setProductModalSubmitted] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
 
   const [files, setFiles] = useState<any[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -132,12 +132,10 @@ const HandoverForm = () => {
       
       // Show success toast
       if (response.data.existed) {
-        setToastMessage(`Product '${productToSelect}' already exists. It has been selected.`);
+        showSuccess(`Product '${productToSelect}' already exists. It has been selected.`);
       } else {
-        setToastMessage(`Product '${productToSelect}' added successfully.`);
+        showSuccess(`Product '${productToSelect}' added successfully.`);
       }
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error('Failed to create product:', err);
       const detail = err.response?.data?.detail;
@@ -255,9 +253,9 @@ const HandoverForm = () => {
       console.error('Save handover error:', err) 
       const detail = err.response?.data?.detail 
       if (Array.isArray(detail)) { 
-        alert(detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('\n')) 
+        showError(detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('\n')) 
       } else { 
-        alert(typeof detail === 'string' ? detail : 'Error saving handover: ' + err.message) 
+        showError(typeof detail === 'string' ? detail : 'Error saving handover: ' + err.message) 
       } 
     } finally { 
       setLoading(false) 
@@ -651,16 +649,6 @@ const HandoverForm = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in-up z-50">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {toastMessage}
         </div>
       )}
     </form>

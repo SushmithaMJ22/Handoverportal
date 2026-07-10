@@ -119,8 +119,8 @@ class BackupScheduler:
             ).order_by(BackupRecord.created_at.desc()).first()
             
             if not last_backup:
-                logger.info("No previous automatic backup found, running first backup")
-                return True
+                logger.info("No previous automatic backup found - scheduler will wait for configured interval before first backup")
+                return False
             
             # Check if enough time has passed
             now = datetime.now(timezone.utc)
@@ -167,6 +167,10 @@ class BackupScheduler:
                 if last_backup.created_at.tzinfo is None:
                     last_backup.created_at = last_backup.created_at.replace(tzinfo=timezone.utc)
                 next_backup = last_backup.created_at + timedelta(days=self.frequency_days)
+            elif self.enabled:
+                # If no automatic backup has run yet but scheduler is enabled,
+                # calculate next backup from current time
+                next_backup = datetime.now(timezone.utc) + timedelta(days=self.frequency_days)
             
             return {
                 "enabled": self.enabled,

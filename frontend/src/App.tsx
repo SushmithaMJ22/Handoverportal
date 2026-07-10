@@ -12,6 +12,7 @@ import SuperAdminActivityPage from './pages/SuperAdminActivityPage';
 import SystemBackupPage from './pages/SystemBackupPage';
 import Layout from './components/Layout';
 import { useAuth } from './hooks/useAuth';
+import { ToastProvider } from './components/ui/ToastProvider';
 
 function ProtectedRoute({ children, roles = [] }: { children: React.ReactNode, roles?: string[] }) {
   const { user } = useAuth();
@@ -31,76 +32,78 @@ function ProtectedRoute({ children, roles = [] }: { children: React.ReactNode, r
 function App() {
   const { user } = useAuth();
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/create-user" element={
-        <ProtectedRoute roles={['super_admin']}>
-          <CreateUserPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/" element={<Layout />}>
-        <Route index element={
+    <ToastProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/create-user" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <CreateUserPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/" element={<Layout />}>
+          <Route index element={
+            user?.role === 'super_admin' 
+              ? <Navigate to="/dashboard" replace /> 
+              : <Navigate to="/dashboard" replace />
+          } />
+          <Route path="dashboard" element={
+            <ProtectedRoute roles={['admin', 'user', 'super_admin']}>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="handovers" element={
+            <ProtectedRoute>
+              <HandoverList />
+            </ProtectedRoute>
+          } />
+          <Route path="handovers/new" element={
+            <ProtectedRoute roles={['admin']}>
+              <HandoverForm />
+            </ProtectedRoute>
+          } />
+          <Route path="handovers/:id" element={
+            <ProtectedRoute>
+              <HandoverDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="handovers/:id/edit" element={
+            <ProtectedRoute roles={['admin']}>
+              <HandoverForm />
+            </ProtectedRoute>
+          } />
+          <Route path="customers" element={
+            <ProtectedRoute>
+              <CustomerManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="reports" element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="users" element={
+            <ProtectedRoute roles={['super_admin']}>
+              <UserManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="superadmin/activity" element={
+            <ProtectedRoute roles={['super_admin']}>
+              <SuperAdminActivityPage />
+            </ProtectedRoute>
+          } />
+          <Route path="system-backup" element={
+            <ProtectedRoute roles={['super_admin']}>
+              <SystemBackupPage />
+            </ProtectedRoute>
+          } />
+        </Route>
+        <Route path="*" element={
           user?.role === 'super_admin' 
-            ? <Navigate to="/dashboard" replace /> 
+            ? <Navigate to="/create-user" replace /> 
             : <Navigate to="/dashboard" replace />
         } />
-        <Route path="dashboard" element={
-          <ProtectedRoute roles={['admin', 'user', 'super_admin']}>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="handovers" element={
-          <ProtectedRoute>
-            <HandoverList />
-          </ProtectedRoute>
-        } />
-        <Route path="handovers/new" element={
-          <ProtectedRoute roles={['admin']}>
-            <HandoverForm />
-          </ProtectedRoute>
-        } />
-        <Route path="handovers/:id" element={
-          <ProtectedRoute>
-            <HandoverDetail />
-          </ProtectedRoute>
-        } />
-        <Route path="handovers/:id/edit" element={
-          <ProtectedRoute roles={['admin']}>
-            <HandoverForm />
-          </ProtectedRoute>
-        } />
-        <Route path="customers" element={
-          <ProtectedRoute>
-            <CustomerManagement />
-          </ProtectedRoute>
-        } />
-        <Route path="reports" element={
-          <ProtectedRoute>
-            <ReportsPage />
-          </ProtectedRoute>
-        } />
-        <Route path="users" element={
-          <ProtectedRoute roles={['super_admin']}>
-            <UserManagement />
-          </ProtectedRoute>
-        } />
-        <Route path="superadmin/activity" element={
-          <ProtectedRoute roles={['super_admin']}>
-            <SuperAdminActivityPage />
-          </ProtectedRoute>
-        } />
-        <Route path="system-backup" element={
-          <ProtectedRoute roles={['super_admin']}>
-            <SystemBackupPage />
-          </ProtectedRoute>
-        } />
-      </Route>
-      <Route path="*" element={
-        user?.role === 'super_admin' 
-          ? <Navigate to="/create-user" replace /> 
-          : <Navigate to="/dashboard" replace />
-      } />
-    </Routes>
+      </Routes>
+    </ToastProvider>
   );
 }
 
