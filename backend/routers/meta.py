@@ -14,9 +14,9 @@ router = APIRouter(prefix="/meta", tags=["meta"])
 
 class ProductCreate(BaseModel):
     product: str = Field(..., min_length=1, description="Product name is required")
-    platform: str = Field(..., min_length=1, description="Platform is required")
-    sub_product: str = Field("", description="Sub product (optional)")
-    solution: str = Field("", description="Solution (optional)")
+    platform: str = Field(..., min_length=1, description="Platform is required (comma-separated)")
+    sub_product: str = Field("", description="Sub product (optional, comma-separated)")
+    solution: str = Field("", description="Solution (optional, comma-separated)")
 
 
 @router.get("/taxonomy")

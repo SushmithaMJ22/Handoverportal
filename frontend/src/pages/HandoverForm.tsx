@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Save, X, Upload, FileText, Trash2, Loader2, Plus } from 'lucide-react';
 import api from '../api/axios';
 import { useToast } from '../components/ui/ToastProvider';
+import TagInput from '../components/ui/TagInput';
 
 const HandoverForm = () => {
   const { id } = useParams();
@@ -33,9 +34,9 @@ const HandoverForm = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [newProduct, setNewProduct] = useState({
     product: '',
-    platform: '',
-    sub_product: '',
-    solution: ''
+    platform: [] as string[],
+    sub_product: [] as string[],
+    solution: [] as string[]
   });
   const [productModalError, setProductModalError] = useState('');
   const [productModalSubmitted, setProductModalSubmitted] = useState(false);
@@ -84,9 +85,9 @@ const HandoverForm = () => {
     setShowProductModal(true);
     setNewProduct({
       product: '',
-      platform: '',
-      sub_product: '',
-      solution: ''
+      platform: [] as string[],
+      sub_product: [] as string[],
+      solution: [] as string[]
     });
     setProductModalError('');
     setProductModalSubmitted(false);
@@ -99,8 +100,8 @@ const HandoverForm = () => {
       setProductModalError('Product Name is required');
       return;
     }
-    if (!newProduct.platform.trim()) {
-      setProductModalError('Platform is required');
+    if (newProduct.platform.length === 0) {
+      setProductModalError('At least one Platform is required');
       return;
     }
     
@@ -109,9 +110,9 @@ const HandoverForm = () => {
     try {
       const response = await api.post('/meta/products', {
         product: newProduct.product.trim(),
-        platform: newProduct.platform.trim(),
-        sub_product: newProduct.sub_product.trim(),
-        solution: newProduct.solution.trim()
+        platform: newProduct.platform.join(','),
+        sub_product: newProduct.sub_product.join(','),
+        solution: newProduct.solution.join(',')
       });
       
       // Refresh taxonomy
@@ -147,9 +148,9 @@ const HandoverForm = () => {
     setShowProductModal(false);
     setNewProduct({
       product: '',
-      platform: '',
-      sub_product: '',
-      solution: ''
+      platform: [] as string[],
+      sub_product: [] as string[],
+      solution: [] as string[]
     });
     setProductModalError('');
     setProductModalSubmitted(false);
@@ -595,39 +596,33 @@ const HandoverForm = () => {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Platform *</label>
-                <input
-                  type="text"
-                  placeholder="Enter platform"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none ${
-                    productModalSubmitted && !newProduct.platform.trim() ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  value={newProduct.platform}
-                  onChange={(e) => setNewProduct({...newProduct, platform: e.target.value})}
+                <TagInput
+                  tags={newProduct.platform}
+                  setTags={(tags) => setNewProduct({...newProduct, platform: tags})}
+                  placeholder="Type and press Enter or comma to add platforms"
+                  required={true}
+                  error={productModalSubmitted && newProduct.platform.length === 0}
+                  errorMessage="At least one Platform is required"
                 />
-                {productModalSubmitted && !newProduct.platform.trim() && (
-                  <p className="text-red-500 text-xs mt-1">Platform is required</p>
-                )}
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Sub Product</label>
-                <input
-                  type="text"
-                  placeholder="Enter sub product (optional)"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none border-gray-300"
-                  value={newProduct.sub_product}
-                  onChange={(e) => setNewProduct({...newProduct, sub_product: e.target.value})}
+                <TagInput
+                  tags={newProduct.sub_product}
+                  setTags={(tags) => setNewProduct({...newProduct, sub_product: tags})}
+                  placeholder="Type and press Enter or comma to add sub products (optional)"
+                  required={false}
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Solution</label>
-                <input
-                  type="text"
-                  placeholder="Enter solution (optional)"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none border-gray-300"
-                  value={newProduct.solution}
-                  onChange={(e) => setNewProduct({...newProduct, solution: e.target.value})}
+                <TagInput
+                  tags={newProduct.solution}
+                  setTags={(tags) => setNewProduct({...newProduct, solution: tags})}
+                  placeholder="Type and press Enter or comma to add solutions (optional)"
+                  required={false}
                 />
               </div>
             </div>
